@@ -4,6 +4,7 @@
   <!-- <form action="/listings/new">
       <button>Create New Listings</button>
     </form> -->
+  <%= successMsg %>
   <div class="row row-cols-lg-3 row-cols-md-3 row-cols-sm-1">
     <% for(listing of allListings) { %>
     <a href="/listings/<%= listing._id %>" class="listing-link">
@@ -14,7 +15,7 @@
           alt="listing_image"
           style="height: 20rem"
         />
-         <div class="card-img-overlay">ABCD</div>
+         <div class="card-img-overlay"><%= listing.title %></div>
         <div class="card-body">
           <p class="card-text">
             <b><%= listing.title %></b> <br />

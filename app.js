@@ -4,13 +4,22 @@ const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 
-const { listingSchema, reviewSchema } = require("./schema.js");
+const session = require("express-session");
+const flash = require("connect-flash");
+
+// const { listingSchema, reviewSchema } = require("./schema.js");
 
 const Listing = require("./models/listing.js");
-const Review = require("./models/review.js");
+// const Review = require("./models/review.js");
+const passport = require("passport");
+const localStrategy = require("passport-local");
+const User = require("./models/user.js"); 
 
 const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
+
+const listings = require("./routes/listing.js");
+const reviews = require("./routes/review.js");
 
 const app = express();
 const port = 8080;
@@ -41,153 +50,43 @@ async function main() {
   await mongoose.connect(MONGO_URL);
 }
 
+const sessionOptions = {
+  secret: "mysupersecretcode",
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, //1 week time for today
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
+    httpOnly: true,
+  }
+};
+
+
+
 app.get("/", (req, res) => {
   res.send("Welcome to Wanderlust");
 });
 
-const validateListing = (req, res, next) => {
-  let { error } = listingSchema.validate(req.body);
-  console.log(req.body);
-  console.log(error);
-  if (error) {
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  } else {
-    next();
-  }
-};
+app.use(session(sessionOptions));  //It is also used for passport package as uses session to track and store user info
+app.use(flash());
 
-const validateReview = (req, res, next) => {
-  let { error } = reviewSchema.validate(req.body);
-  console.log(req.body);
-  console.log(error);
-  if (error) {
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  } else {
-    next();
-  }
-};
+app.use(passport.initialize());
+app.use(passport.session()) //Middleware that will restore login state from a session.
 
-//Index Route
-app.get(
-  "/listings",
-  wrapAsync(async (req, res) => {
-    let allListings = await Listing.find();
-    res.render("listings/index.ejs", { allListings });
-  })
-);
+app.use((req, res, next) => {
+  res.locals.successMsg = req.flash("success");
+  res.locals.errorMsg = req.flash("error");
+  // console.log(req.flash("success"));
+  // console.log("Flash success:", res.locals.successMsg);
+  // console.log("Flash error:", res.locals.errorMsg);
+  next();
+})
 
-//New route
-app.get("/listings/new", (req, res) => {
-  res.render("listings/new.ejs");
-});
-
-//Create route
-app.post(
-  "/listings",
-  validateListing,
-  wrapAsync(async (req, res, next) => {
-    // if (!req.body.listing) {
-    //   throw new ExpressError(400, "Send a valid Listings");
-    // }
-
-    //Using Joi package to validate instead of if statements
-    // let result = listingSchema.validate(req.body);
-    // console.log(req.body);
-    // console.log(result);
-    // if(result.error){
-    //   throw new ExpressError(400, result.error);
-    // }
-
-    // let { title, description, image, price, country, location } = req.body;
-    // let listing = req.body.listing;                      ====
-    const newListing = new Listing(req.body.listing); //   <====|
-    await newListing.save();
-    res.redirect("/listings");
-  })
-);
-
-//Edit Route
-app.get(
-  "/listings/:id/edit",
-  wrapAsync(async (req, res) => {
-    // console.log("success");
-    let { id } = req.params;
-    let listing = await Listing.findById(id);
-    res.render("listings/edit.ejs", { listing });
-  })
-);
-
-//Update Route
-app.put(
-  "/listings/:id",
-  validateListing,
-  wrapAsync(async (req, res) => {
-    // if (!req.body.listings) {
-    //   throw new ExpressError(400, "Send a valid Listings");
-    // }
-    let { id } = req.params;
-    await Listing.findByIdAndUpdate(id, { ...req.body.listing });
-    res.redirect(`/listings/${id}`);
-  })
-);
-
-//Delete Route
-app.delete(
-  "/listings/:id",
-  wrapAsync(async (req, res) => {
-    let { id } = req.params;
-    let deletedListing = await Listing.findByIdAndDelete(id);
-    console.log(deletedListing);
-    res.redirect("/listings");
-  })
-);
-
-//Show route
-app.get(
-  "/listings/:id",
-  wrapAsync(async (req, res) => {
-    let { id } = req.params;
-    const listing = await Listing.findById(id).populate("reviews");
-    res.render("listings/show.ejs", { listing });
-  })
-);
+//Listings
+app.use("/listings", listings);
 
 //Review
-//Post Review Route
-app.post(
-  "/listings/:id/reviews",
-  validateReview,
-  wrapAsync(async (req, res) => {
-    let listing = await Listing.findById(req.params.id);
-    let newReview = new Review(req.body.review);
-
-    listing.reviews.push(newReview);
-
-    // console.log(listing);
-
-    await newReview.save();
-    await listing.save();
-
-    console.log("new review added");
-    res.redirect(`/listings/${listing._id}`);
-  })
-);
-
-//Delete Review Route
-app.delete(
-  "/listings/:id/reviews/:reviewId",
-  wrapAsync(async (req, res) => {
-    let {id, reviewId} = req.params;
-    // console.log(reviewId);
-
-    await Listing.findByIdAndUpdate(id, {$pull: {reviews: reviewId}});
-    await Review.findByIdAndDelete(reviewId);
-
-    res.redirect(`/listings/${id}`);
-  })
-);
+app.use("/listings/:id/reviews", reviews);
 
 // app.get("/testListing", async (req, res) => {
 //   let sampleListing = new Listing({
