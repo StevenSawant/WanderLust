@@ -12,14 +12,15 @@ const flash = require("connect-flash");
 const Listing = require("./models/listing.js");
 // const Review = require("./models/review.js");
 const passport = require("passport");
-const localStrategy = require("passport-local");
+const LocalStrategy = require("passport-local");
 const User = require("./models/user.js"); 
 
 const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
 
-const listings = require("./routes/listing.js");
-const reviews = require("./routes/review.js");
+const listingRouter = require("./routes/listing.js");
+const reviewRouter = require("./routes/review.js");
+const userRouter = require("./routes/user.js");
 
 const app = express();
 const port = 8080;
@@ -72,6 +73,11 @@ app.use(flash());
 
 app.use(passport.initialize());
 app.use(passport.session()) //Middleware that will restore login state from a session.
+passport.use(new LocalStrategy(User.authenticate())); //What strategy to use
+
+passport.serializeUser(User.serializeUser()); //save user data when session is ongoing
+passport.deserializeUser(User.deserializeUser()); //remove session data when user is done
+
 
 app.use((req, res, next) => {
   res.locals.successMsg = req.flash("success");
@@ -79,14 +85,31 @@ app.use((req, res, next) => {
   // console.log(req.flash("success"));
   // console.log("Flash success:", res.locals.successMsg);
   // console.log("Flash error:", res.locals.errorMsg);
+  res.locals.currentUser = req.user; //accessing req.user to check if user if logged in or not for navbar options
   next();
 })
 
+
+//Demo User implementation
+// app.get("/demouser", async (req, res) => {
+//   let fakeUser = new User({
+//     email: "abc@gmail.com",
+//     username: "Abc" 
+//   });
+
+//   let registeredUser = await User.register(fakeUser, "hello");
+//   res.send(registeredUser);
+// });
+
+//Routes
 //Listings
-app.use("/listings", listings);
+app.use("/listings", listingRouter);
 
 //Review
-app.use("/listings/:id/reviews", reviews);
+app.use("/listings/:id/reviews", reviewRouter);
+
+//User
+app.use("/", userRouter);
 
 // app.get("/testListing", async (req, res) => {
 //   let sampleListing = new Listing({
