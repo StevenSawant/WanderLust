@@ -1,26 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-const { listingSchema } = require("../schema.js");
-
 const wrapAsync = require("../utils/wrapAsync.js");
-const ExpressError = require("../utils/ExpressError.js");
 
 const Listing = require("../models/listing.js");
 
-const {isLoggedIn} = require("../middleware.js");
-
-const validateListing = (req, res, next) => {
-  let { error } = listingSchema.validate(req.body);
-  // console.log(req.body);
-  console.log(error);
-  if (error) {
-    let errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  } else {
-    next();
-  }
-};
+const { isLoggedIn, isOwner, validateListing } = require("../middleware.js");
 
 //Index Route
 router.get(
@@ -32,7 +17,7 @@ router.get(
 );
 
 //New route
-router.get("/new", isLoggedIn,(req, res) => {
+router.get("/new", isLoggedIn, (req, res) => {
   // console.log(req.user);
   res.render("listings/new.ejs");
 });
@@ -42,7 +27,15 @@ router.get(
   "/:id",
   wrapAsync(async (req, res) => {
     let { id } = req.params;
-    const listing = await Listing.findById(id).populate("reviews");
+    const listing = await Listing.findById(id)
+      .populate({
+        path: "reviews",
+        populate: {
+          path: "author" }, //Here nesting population is used populate fields within documents that have already been populated. This is achieved by passing an object to populate() with a nested populate option
+      }) 
+      .populate("owner");
+
+    console.log(listing);
     if (!listing) {
       req.flash("error", "The Listing you requested for, does not exist.");
       return res.redirect("/listings");
@@ -72,6 +65,8 @@ router.post(
     // let { title, description, image, price, country, location } = req.body;
     // let listing = req.body.listing;                      ====|
     const newListing = new Listing(req.body.listing); //   <====|
+    console.log(req.user);
+    newListing.owner = req.user._id;
     await newListing.save();
     req.flash("success", "New Listing Created!");
     res.redirect("/listings");
@@ -82,6 +77,7 @@ router.post(
 router.get(
   "/:id/edit",
   isLoggedIn,
+  isOwner,
   wrapAsync(async (req, res) => {
     // console.log("success");
     let { id } = req.params;
@@ -98,6 +94,7 @@ router.get(
 router.put(
   "/:id",
   isLoggedIn,
+  isOwner,
   validateListing,
   wrapAsync(async (req, res) => {
     // if (!req.body.listings) {
@@ -114,6 +111,7 @@ router.put(
 router.delete(
   "/:id",
   isLoggedIn,
+  isOwner,
   wrapAsync(async (req, res) => {
     let { id } = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);

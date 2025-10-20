@@ -87,7 +87,7 @@ app.use((req, res, next) => {
   // console.log("Flash error:", res.locals.errorMsg);
   res.locals.currentUser = req.user; //accessing req.user to check if user if logged in or not for navbar options
   next();
-})
+});
 
 
 //Demo User implementation
