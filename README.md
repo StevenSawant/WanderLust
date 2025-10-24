@@ -1,6 +1,15 @@
 # WanderLust
 
-WanderLust is a full-stack web application built with Node.js, Express, MongoDB, and EJS, designed for users to explore, list, and review travel destinations. It features user authentication, CRUD operations for listings, and a review system.
+WanderLust is a full-stack web application built with Node.js, Express, MongoDB, and EJS, designed for users to explore, list, and review travel destinations. It features user authentication, CRUD operations for listings, and a review system. The application follows the MVC (Model-View-Controller) architecture for organized code structure.
+
+## Architecture
+
+The application is structured using the MVC (Model-View-Controller) pattern:
+- **Models**: Define the data structure and interact with the MongoDB database using Mongoose.
+- **Views**: EJS templates for rendering the user interface.
+- **Controllers**: Handle logic and mediate between models and views.
+
+This separation ensures maintainable and scalable code.
 
 ## Features
 
@@ -76,6 +85,10 @@ WanderLust/
 ├── package.json           # Dependencies and scripts
 ├── package-lock.json      # Lockfile for dependencies
 ├── .gitignore             # Git ignore rules
+├── controller/
+│   ├── listings.js        # Controller for listings logic
+│   ├── reviews.js         # Controller for reviews logic
+│   └── users.js           # Controller for user authentication logic
 ├── init/
 │   ├── index.js           # Database initialization script
 │   └── data.js            # Sample data for listings
@@ -108,6 +121,7 @@ WanderLust/
 │       └── signup.ejs     # Signup page
 ├── public/
 │   ├── css/
+│   │   ├── rating.css     # Styles for rating component
 │   │   └── style.css      # Custom styles
 │   └── js/
 │       └── script.js      # Client-side scripts
