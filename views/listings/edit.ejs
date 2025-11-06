@@ -7,6 +7,7 @@
       method="POST"
       novalidate
       class="needs-validation"
+      enctype="multipart/form-data"
     >
       <div class="mb-3">
         <label for="title" class="form-label">Title: </label>
@@ -34,15 +35,17 @@
       </div>
 
       <div class="mb-3">
-        <label for="image" class="form-label">Image </label>
+        Original Listing Image <br>
+        <img src="<%= originalImageUrl %>" width="250">
+      </div>
+
+      <div class="mb-3">
+        <label for="image" class="form-label">Upload New Image</label>
         <input
-          name="listing[image][url]"
-          type="text"
+          name="listing[image]"
+          type="file"
           class="form-control"
-          value="<%= listing.image.url %>"
-          required
         />
-        <div class="invalid-feedback">Enter a valid Link</div>
       </div>
 
       <div class="row">

@@ -1,4 +1,7 @@
 const Listing = require("../models/listing");
+const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
+const mapToken = process.env.MAP_TOKEN;
+const geocodingClient = mbxGeocoding({ accessToken: mapToken });
 
 module.exports.index = async (req, res) => {
     let allListings = await Listing.find();
@@ -30,24 +33,26 @@ module.exports.showListing = async (req, res) => {
 }
 
 module.exports.createListing = async (req, res, next) => {
-    // if (!req.body.listing) {
-    //   throw new ExpressError(400, "Send a valid Listings");
-    // }
+    let response = await geocodingClient.forwardGeocode({
+        query: req.body.listing.location,
+        limit: 1,
+    })
+        .send()
+    // console.log(response.body.features[0].geometry);
+    // res.send("done!");
 
-    //Using Joi package to validate instead of if statements
-    // let result = listingSchema.validate(req.body);
-    // console.log(req.body);
-    // console.log(result);
-    // if(result.error){
-    //   throw new ExpressError(400, result.error);
-    // }
 
-    // let { title, description, image, price, country, location } = req.body;
-    // let listing = req.body.listing;                      ====|
-    const newListing = new Listing(req.body.listing); //   <====|
-    console.log(req.user);
+    let url = req.file.path;
+    let filename = req.file.filename;
+    // console.log(url, "...", filename);
+
+    const newListing = new Listing(req.body.listing);
+    // console.log(req.user);
     newListing.owner = req.user._id;
-    await newListing.save();
+    newListing.image = { filename, url };
+    newListing.geometry = response.body.features[0].geometry;
+    let savedListing = await newListing.save();
+    console.log(savedListing);
     req.flash("success", "New Listing Created!");
     res.redirect("/listings");
 }
@@ -60,16 +65,26 @@ module.exports.renderEditForm = async (req, res) => {
         req.flash("error", "The Listing you requested for, does not exist.");
         return res.redirect("/listings");
     }
-    res.render("listings/edit.ejs", { listing });
+    let originalImageUrl = listing.image.url;
+    originalImageUrl = originalImageUrl.replace("/upload", "/upload/w_250");
+    res.render("listings/edit.ejs", { listing, originalImageUrl });
 }
 
 module.exports.updateListing = async (req, res) => {
     // if (!req.body.listings) {
     //   throw new ExpressError(400, "Send a valid Listings");
     // }
+
     let { id } = req.params;
-    await Listing.findByIdAndUpdate(id, { ...req.body.listing });
-    req.flash("success", "Listing Updated!");
+    let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+
+    if (typeof req.file !== "undefined") {
+        let url = req.file.path;
+        let filename = req.file.filename;
+        listing.image = { filename, url };
+        await listing.save();
+    }
+
     res.redirect(`/listings/${id}`);
 }
 

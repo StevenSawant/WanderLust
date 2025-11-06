@@ -14,14 +14,16 @@ const listingSchema = new Schema({
     type: String,
   },
   image: {
-    filename: {
-      type: String,
-    },
-    url: {
-      type: String,
-      default: defaultLink,
-      set: (v) => (v === "" ? defaultLink : v),
-    },
+    // filename: {
+    //   type: String,
+    // },
+    // url: {
+    //   type: String,
+    //   default: defaultLink,
+    //   set: (v) => (v === "" ? defaultLink : v),
+    // },
+    filename: String,
+    url: String,
   },
   price: {
     type: Number,
@@ -42,11 +44,22 @@ const listingSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "User",
   },
+  geometry: {
+    type: {
+      type: String, // Don't do `{ location: { type: String } }`
+      enum: ['Point'], // 'location.type' must be 'Point'
+      required: true
+    },
+    coordinates: {
+      type: [Number],
+      required: true
+    }
+  }
 });
 
 listingSchema.post("findOneAndDelete", async (listing) => { //This middleware will delete said reviews from DB for the listing deleted.
-  if(listing){
-    await Review.deleteMany({_id: {$in: listing.reviews} });
+  if (listing) {
+    await Review.deleteMany({ _id: { $in: listing.reviews } });
   }
 });
 
